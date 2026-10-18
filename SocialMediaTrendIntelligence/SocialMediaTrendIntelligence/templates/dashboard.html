@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block page_subtitle %}Overview of cross-platform trend activity across the dataset{% endblock %}
+
+{% block content %}
+
+<div class="row g-3 mb-2">
+  <div class="col-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon">▤</div>
+      <div class="stat-label">Total Posts</div>
+      <div class="stat-value">{{ "{:,}".format(total_posts) }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon">◈</div>
+      <div class="stat-label">Platforms Tracked</div>
+      <div class="stat-value">{{ total_platforms }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon">⬆</div>
+      <div class="stat-label">High Trend Posts</div>
+      <div class="stat-value">{{ "{:,}".format(high_trend_posts) }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon">∿</div>
+      <div class="stat-label">Avg. Engagement Rate</div>
+      <div class="stat-value">{{ avg_engagement }}%</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mt-1">
+  <div class="col-lg-6">
+    <div class="panel">
+      <div class="panel-title">Platform-wise Post Distribution</div>
+      <div class="panel-subtitle">Share of collected posts by platform</div>
+      <div class="chart-wrap"><canvas id="chartPlatformDist"></canvas></div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="panel">
+      <div class="panel-title">Average Engagement by Platform</div>
+      <div class="panel-subtitle">Mean engagement rate (%) per platform</div>
+      <div class="chart-wrap"><canvas id="chartEngagementPlatform"></canvas></div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="panel">
+      <div class="panel-title">Trend Category Distribution</div>
+      <div class="panel-subtitle">Low / Moderate / High trend posts</div>
+      <div class="chart-wrap"><canvas id="chartTrendDist"></canvas></div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="panel">
+      <div class="panel-title">Sentiment Distribution</div>
+      <div class="panel-subtitle">Positive / Neutral / Negative posts</div>
+      <div class="chart-wrap"><canvas id="chartSentimentDist"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<div class="panel mt-1">
+  <div class="panel-title">Recent Predictions</div>
+  <div class="panel-subtitle">Latest results generated from the Prediction page</div>
+  <div class="table-scroll">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Time</th><th>Platform</th><th>Category</th>
+          <th>Views</th><th>Predicted Trend</th><th>Confidence</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in recent_predictions %}
+        <tr>
+          <td class="mono">{{ p.created_at }}</td>
+          <td>{{ p.platform }}</td>
+          <td>{{ p.category }}</td>
+          <td>{{ "{:,}".format(p.views) }}</td>
+          <td><span class="badge-trend {{ p.final_prediction }}">{{ p.final_prediction }}</span></td>
+          <td class="text-muted">{{ p.final_confidence }}%</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="text-muted text-center py-4">No predictions made yet. Try the Trend Predictor page.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const chartData = {{ chart_data | safe }};
+
+new Chart(document.getElementById('chartPlatformDist'), {
+  type: 'doughnut',
+  data: {
+    labels: chartData.platform_labels,
+    datasets: [{ data: chartData.platform_values,
+      backgroundColor: ['#FFB000', '#2FD1E0', '#00E676', '#FF9100'] }]
+  },
+  options: { plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } } }
+});
+
+new Chart(document.getElementById('chartEngagementPlatform'), {
+  type: 'bar',
+  data: {
+    labels: chartData.engagement_platform_labels,
+    datasets: [{ label: 'Avg Engagement %', data: chartData.engagement_platform_values,
+      backgroundColor: '#FFB000', borderRadius: 6, maxBarThickness: 46 }]
+  },
+  options: { plugins: { legend: { display: false } },
+    scales: { y: { beginAtZero: true, grid: { color: '#1C2330' } }, x: { grid: { display: false } } } }
+});
+
+new Chart(document.getElementById('chartTrendDist'), {
+  type: 'bar',
+  data: {
+    labels: chartData.trend_labels,
+    datasets: [{ label: 'Posts', data: chartData.trend_values,
+      backgroundColor: ['#7C879C', '#FF9100', '#00E676'], borderRadius: 6, maxBarThickness: 60 }]
+  },
+  options: { indexAxis: 'y', plugins: { legend: { display: false } },
+    scales: { x: { beginAtZero: true, grid: { color: '#1C2330' } }, y: { grid: { display: false } } } }
+});
+
+new Chart(document.getElementById('chartSentimentDist'), {
+  type: 'pie',
+  data: {
+    labels: chartData.sentiment_labels,
+    datasets: [{ data: chartData.sentiment_values,
+      backgroundColor: ['#00E676', '#7C879C', '#FF3B3B'] }]
+  },
+  options: { plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } } }
+});
+</script>
+{% endblock %}

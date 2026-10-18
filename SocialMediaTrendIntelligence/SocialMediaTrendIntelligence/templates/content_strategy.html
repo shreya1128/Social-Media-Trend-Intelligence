@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% block title %}Content Strategy{% endblock %}
+{% block page_title %}Content Strategy{% endblock %}
+{% block page_subtitle %}Data-backed recommendations on what, where and when to post{% endblock %}
+
+{% block content %}
+
+<div class="row g-3 mb-1">
+  <div class="col-md-6">
+    <div class="stat-card">
+      <div class="stat-icon">◔</div>
+      <div class="stat-label">Best Day to Post</div>
+      <div class="stat-value">{{ best_day }}</div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="stat-card">
+      <div class="stat-icon">☺</div>
+      <div class="stat-label">Positive-Tone Lift</div>
+      <div class="stat-value">+{{ sentiment_lift }}%</div>
+      <div class="text-muted" style="font-size:11.5px; margin-top:4px;">vs. negative-tone posts, on trend score</div>
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-title">Get a Personalized Recommendation</div>
+  <div class="panel-subtitle">Pick your platform and content category to see what's working best right now</div>
+  <form method="GET" class="row g-2 align-items-end">
+    <div class="col-6 col-md-4">
+      <label class="form-label">Platform</label>
+      <select name="platform" class="form-select form-select-sm">
+        <option value="">Choose a platform</option>
+        {% for p in filter_options.platforms %}
+        <option value="{{ p }}" {{ 'selected' if selected.platform == p }}>{{ p }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-md-4">
+      <label class="form-label">Category</label>
+      <select name="category" class="form-select form-select-sm">
+        <option value="">Choose a category</option>
+        {% for c in filter_options.categories %}
+        <option value="{{ c }}" {{ 'selected' if selected.category == c }}>{{ c }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-md-2">
+      <button type="submit" class="btn btn-primary btn-sm w-100">Get Insight</button>
+    </div>
+    {% if selected.platform or selected.category %}
+    <div class="col-6 col-md-2">
+      <a href="{{ url_for('content_strategy') }}" class="btn btn-outline-secondary btn-sm w-100">Reset</a>
+    </div>
+    {% endif %}
+  </form>
+
+  {% if personalized %}
+    {% if personalized.insufficient_data %}
+    <div class="alert alert-warning mt-3 mb-0 py-2 small">
+      Not enough posts yet for {{ personalized.platform }} · {{ personalized.category }} to give a reliable recommendation
+      (only {{ personalized.sample_size }} posts found). Try a different combination.
+    </div>
+    {% else %}
+    <div class="mt-3" style="background:var(--amber-tint); border:1px solid var(--line-bright); border-radius: var(--radius-lg); padding:16px 18px;">
+      <div style="font-weight:700; color:var(--amber); margin-bottom:6px; letter-spacing:0.03em;">
+        {{ personalized.platform }} · {{ personalized.category }}
+      </div>
+      <div style="font-size:12.5px; color:var(--text); line-height:1.6;">
+        Based on {{ "{:,}".format(personalized.sample_size) }} posts, content in this combination scores an average
+        trend score of <strong>{{ personalized.avg_trend_score }}/100</strong> with
+        <strong>{{ personalized.avg_engagement }}%</strong> average engagement.
+        Posts published on <strong>{{ personalized.best_day }}</strong> tend to perform best.
+      </div>
+    </div>
+    {% endif %}
+  {% endif %}
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="panel">
+      <div class="panel-title">Trend Score by Day of Week</div>
+      <div class="panel-subtitle">When your content is most likely to catch on</div>
+      <div class="chart-wrap"><canvas id="chartByDay"></canvas></div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="panel">
+      <div class="panel-title">Top Performing Platform + Category Combinations</div>
+      <div class="panel-subtitle">Highest average trend score, minimum {{ 20 }} posts</div>
+      <div class="chart-wrap"><canvas id="chartCombos"></canvas></div>
+    </div>
+  </div>
+  <div class="col-lg-12">
+    <div class="panel">
+      <div class="panel-title">Top Performing Topics</div>
+      <div class="panel-subtitle">Topics with the strongest average trend score</div>
+      <div class="chart-wrap"><canvas id="chartTopics"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<div class="panel mb-0">
+  <div class="panel-title">Leaderboard — Platform &times; Category</div>
+  <div class="table-scroll">
+    <table class="data-table">
+      <thead>
+        <tr><th>Platform</th><th>Category</th><th>Avg Trend Score</th><th>Avg Engagement</th><th>Sample Size</th></tr>
+      </thead>
+      <tbody>
+        {% for c in top_combos %}
+        <tr>
+          <td>{{ c.platform }}</td>
+          <td>{{ c.category }}</td>
+          <td>{{ "%.1f"|format(c.avg_trend_score) }}</td>
+          <td>{{ "%.2f"|format(c.avg_engagement) }}%</td>
+          <td>{{ "{:,}".format(c.posts) }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="text-muted text-center py-4">Not enough data yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const chartData = {{ chart_data | safe }};
+
+new Chart(document.getElementById('chartByDay'), {
+  type: 'bar',
+  data: {
+    labels: chartData.day_labels,
+    datasets: [{ label: 'Avg Trend Score', data: chartData.day_values,
+      backgroundColor: '#FFB000', borderRadius: 6, maxBarThickness: 36 }]
+  },
+  options: { plugins: { legend: { display: false } },
+    scales: { y: { beginAtZero: true, grid: { color: '#1C2330' } }, x: { grid: { display: false } } } }
+});
+
+new Chart(document.getElementById('chartCombos'), {
+  type: 'bar',
+  data: {
+    labels: chartData.combo_labels,
+    datasets: [{ label: 'Avg Trend Score', data: chartData.combo_values,
+      backgroundColor: '#00E676', borderRadius: 6, maxBarThickness: 28 }]
+  },
+  options: { indexAxis: 'y', plugins: { legend: { display: false } },
+    scales: { x: { beginAtZero: true, grid: { color: '#1C2330' } }, y: { grid: { display: false } } } }
+});
+
+new Chart(document.getElementById('chartTopics'), {
+  type: 'bar',
+  data: {
+    labels: chartData.topic_labels,
+    datasets: [{ label: 'Avg Trend Score', data: chartData.topic_values,
+      backgroundColor: '#FF9100', borderRadius: 6, maxBarThickness: 32 }]
+  },
+  options: { plugins: { legend: { display: false } },
+    scales: { y: { beginAtZero: true, grid: { color: '#1C2330' } }, x: { grid: { display: false } } } }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+{% block title %}Trend Analysis{% endblock %}
+{% block page_title %}Trend Analysis{% endblock %}
+{% block page_subtitle %}Explore trend behaviour by platform, category, topic and date range{% endblock %}
+
+{% block content %}
+
+<form method="GET" class="filter-bar">
+  <div class="row g-2 align-items-end">
+    <div class="col-6 col-md-2">
+      <label class="form-label">Platform</label>
+      <select name="platform" class="form-select form-select-sm">
+        <option value="">All</option>
+        {% for p in filter_options.platforms %}
+        <option value="{{ p }}" {{ 'selected' if selected.platform == p }}>{{ p }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label">Category</label>
+      <select name="category" class="form-select form-select-sm">
+        <option value="">All</option>
+        {% for c in filter_options.categories %}
+        <option value="{{ c }}" {{ 'selected' if selected.category == c }}>{{ c }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label">Topic contains</label>
+      <input type="text" name="topic" class="form-control form-control-sm" placeholder="e.g. AI Tools" value="{{ selected.topic }}">
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label">From</label>
+      <input type="date" name="date_from" class="form-control form-control-sm" value="{{ selected.date_from }}">
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label">To</label>
+      <input type="date" name="date_to" class="form-control form-control-sm" value="{{ selected.date_to }}">
+    </div>
+    <div class="col-6 col-md-2 d-flex gap-2">
+      <button type="submit" class="btn btn-primary btn-sm w-100">Apply</button>
+      <a href="{{ url_for('trend_analysis') }}" class="btn btn-outline-secondary btn-sm w-100">Reset</a>
+    </div>
+  </div>
+</form>
+
+<div class="row g-3 mb-1">
+  <div class="col-6 col-lg-2">
+    <div class="stat-card"><div class="stat-label">Posts</div><div class="stat-value">{{ "{:,}".format(summary.num_posts) }}</div></div>
+  </div>
+  <div class="col-6 col-lg-2">
+    <div class="stat-card"><div class="stat-label">Avg Views</div><div class="stat-value">{{ "{:,.0f}".format(summary.avg_views) }}</div></div>
+  </div>
+  <div class="col-6 col-lg-2">
+    <div class="stat-card"><div class="stat-label">Avg Likes</div><div class="stat-value">{{ "{:,.0f}".format(summary.avg_likes) }}</div></div>
+  </div>
+  <div class="col-6 col-lg-2">
+    <div class="stat-card"><div class="stat-label">Avg Comments</div><div class="stat-value">{{ "{:,.0f}".format(summary.avg_comments) }}</div></div>
+  </div>
+  <div class="col-6 col-lg-2">
+    <div class="stat-card"><div class="stat-label">Avg Shares</div><div class="stat-value">{{ "{:,.0f}".format(summary.avg_shares) }}</div></div>
+  </div>
+  <div class="col-6 col-lg-2">
+    <div class="stat-card"><div class="stat-label">Avg Trend Score</div><div class="stat-value">{{ summary.avg_trend_score }}</div></div>
+  </div>
+</div>
+
+<div class="row g-3 mt-1">
+  <div class="col-lg-6">
+    <div class="panel">
+      <div class="panel-title">Platform Engagement Comparison</div>
+      <div class="chart-wrap"><canvas id="chartPlatformEngagement"></canvas></div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="panel">
+      <div class="panel-title">Trend Score Distribution</div>
+      <div class="chart-wrap"><canvas id="chartTrendScoreDist"></canvas></div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="panel">
+      <div class="panel-title">Sentiment Distribution</div>
+      <div class="chart-wrap"><canvas id="chartSentiment"></canvas></div>
+    </div>
+  </div>
+  <div class="col-lg-8">
+    <div class="panel">
+      <div class="panel-title">Trend Score Over Time</div>
+      <div class="panel-subtitle">Monthly average trend score</div>
+      <div class="chart-wrap"><canvas id="chartTrendTime"></canvas></div>
+    </div>
+  </div>
+  <div class="col-lg-12">
+    <div class="panel">
+      <div class="panel-title">Top Topics</div>
+      <div class="chart-wrap"><canvas id="chartTopTopics"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-title">Filtered Records</div>
+  <div class="panel-subtitle">Showing page {{ page }} of {{ total_pages }}</div>
+  <div class="table-scroll">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Post ID</th><th>Date</th><th>Platform</th><th>Category</th><th>Topic</th>
+          <th>Views</th><th>Likes</th><th>Comments</th><th>Shares</th>
+          <th>Engagement %</th><th>Trend Score</th><th>Trend</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in records %}
+        <tr>
+          <td class="mono">{{ r.post_id }}</td>
+          <td>{{ r.date }}</td>
+          <td>{{ r.platform }}</td>
+          <td>{{ r.category }}</td>
+          <td>{{ r.topic }}</td>
+          <td>{{ "{:,}".format(r.views) }}</td>
+          <td>{{ "{:,}".format(r.likes) }}</td>
+          <td>{{ "{:,}".format(r.comments) }}</td>
+          <td>{{ "{:,}".format(r.shares) }}</td>
+          <td>{{ "%.2f"|format(r.engagement_rate) }}</td>
+          <td>{{ r.trend_score }}</td>
+          <td><span class="badge-trend {{ r.trend_label }}">{{ r.trend_label }}</span></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="12" class="text-muted text-center py-4">No records match these filters.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="pagination-bar">
+    <span>{{ "{:,}".format(summary.num_posts) }} total records</span>
+    <div class="d-flex gap-2">
+      {% set qs = request.args.to_dict() %}
+      {% if page > 1 %}
+      {% set _ = qs.update({'page': page - 1}) %}
+      <a class="btn btn-sm btn-outline-secondary" href="?{{ qs | urlencode }}">Previous</a>
+      {% endif %}
+      <span class="align-self-center px-2">Page {{ page }} / {{ total_pages }}</span>
+      {% if page < total_pages %}
+      {% set qs2 = request.args.to_dict() %}
+      {% set _ = qs2.update({'page': page + 1}) %}
+      <a class="btn btn-sm btn-outline-secondary" href="?{{ qs2 | urlencode }}">Next</a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const chartData = {{ chart_data | safe }};
+
+new Chart(document.getElementById('chartPlatformEngagement'), {
+  type: 'bar',
+  data: { labels: chartData.platform_engagement_labels,
+    datasets: [{ label: 'Avg Engagement %', data: chartData.platform_engagement_values,
+      backgroundColor: '#FFB000', borderRadius: 6, maxBarThickness: 46 }] },
+  options: { plugins: { legend: { display: false } },
+    scales: { y: { beginAtZero: true, grid: { color: '#1C2330' } }, x: { grid: { display: false } } } }
+});
+
+new Chart(document.getElementById('chartTrendScoreDist'), {
+  type: 'bar',
+  data: { labels: chartData.trend_score_bin_labels,
+    datasets: [{ label: 'Posts', data: chartData.trend_score_bin_values,
+      backgroundColor: '#2FD1E0', borderRadius: 6, maxBarThickness: 46 }] },
+  options: { plugins: { legend: { display: false } },
+    scales: { y: { beginAtZero: true, grid: { color: '#1C2330' } }, x: { grid: { display: false } } } }
+});
+
+new Chart(document.getElementById('chartSentiment'), {
+  type: 'pie',
+  data: { labels: chartData.sentiment_labels,
+    datasets: [{ data: chartData.sentiment_values, backgroundColor: ['#00E676', '#7C879C', '#FF3B3B'] }] },
+  options: { plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } } }
+});
+
+new Chart(document.getElementById('chartTrendTime'), {
+  type: 'line',
+  data: { labels: chartData.time_labels,
+    datasets: [{ label: 'Avg Trend Score', data: chartData.time_values,
+      borderColor: '#FFB000', backgroundColor: 'rgba(52,87,213,0.12)', fill: true, tension: 0.35, pointRadius: 3 }] },
+  options: { plugins: { legend: { display: false } },
+    scales: { y: { beginAtZero: true, grid: { color: '#1C2330' } }, x: { grid: { display: false } } } }
+});
+
+new Chart(document.getElementById('chartTopTopics'), {
+  type: 'bar',
+  data: { labels: chartData.topic_labels,
+    datasets: [{ label: 'Posts', data: chartData.topic_values,
+      backgroundColor: '#FF9100', borderRadius: 6, maxBarThickness: 32 }] },
+  options: { indexAxis: 'y', plugins: { legend: { display: false } },
+    scales: { x: { beginAtZero: true, grid: { color: '#1C2330' } }, y: { grid: { display: false } } } }
+});
+</script>
+{% endblock %}

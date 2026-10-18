@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}Trend Predictor{% endblock %}
+{% block page_title %}Trend Predictor{% endblock %}
+{% block page_subtitle %}Enter a post's metrics to predict how it will trend{% endblock %}
+
+{% block content %}
+
+<div class="row g-3">
+  <div class="col-lg-5">
+    <div class="panel">
+      <div class="panel-title">Post Details</div>
+      <div class="panel-subtitle">Enter the metrics of a post to predict its trend category</div>
+
+      <form method="POST" action="{{ url_for('prediction') }}">
+        <div class="row g-3">
+          <div class="col-6">
+            <label class="form-label">Platform</label>
+            <select name="platform" class="form-select" required>
+              <option value="" disabled {{ 'selected' if not form_values.get('platform') }}>Select</option>
+              {% for p in filter_options.platforms %}
+              <option value="{{ p }}" {{ 'selected' if form_values.get('platform') == p }}>{{ p }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-6">
+            <label class="form-label">Category</label>
+            <select name="category" class="form-select" required>
+              <option value="" disabled {{ 'selected' if not form_values.get('category') }}>Select</option>
+              {% for c in filter_options.categories %}
+              <option value="{{ c }}" {{ 'selected' if form_values.get('category') == c }}>{{ c }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-6">
+            <label class="form-label">Views</label>
+            <input type="number" min="1" step="1" name="views" class="form-control" required value="{{ form_values.get('views','') }}" placeholder="e.g. 12000">
+          </div>
+          <div class="col-6">
+            <label class="form-label">Likes</label>
+            <input type="number" min="0" step="1" name="likes" class="form-control" required value="{{ form_values.get('likes','') }}" placeholder="e.g. 900">
+          </div>
+          <div class="col-6">
+            <label class="form-label">Comments</label>
+            <input type="number" min="0" step="1" name="comments" class="form-control" required value="{{ form_values.get('comments','') }}" placeholder="e.g. 80">
+          </div>
+          <div class="col-6">
+            <label class="form-label">Shares</label>
+            <input type="number" min="0" step="1" name="shares" class="form-control" required value="{{ form_values.get('shares','') }}" placeholder="e.g. 150">
+          </div>
+          <div class="col-6">
+            <label class="form-label">Growth Rate (%)</label>
+            <input type="number" step="0.01" name="growth_rate" class="form-control" required value="{{ form_values.get('growth_rate','') }}" placeholder="e.g. 12.5">
+          </div>
+          <div class="col-6">
+            <label class="form-label">Sentiment Score (-1 to 1)</label>
+            <input type="number" step="0.01" min="-1" max="1" name="sentiment_score" class="form-control" required value="{{ form_values.get('sentiment_score','') }}" placeholder="e.g. 0.35">
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary w-100 mt-4">Predict Trend</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="col-lg-7">
+    {% if result %}
+    <div class="predict-result-card mb-3">
+      <div class="method-label">TREND PREDICTION</div>
+      <div class="predicted-class badge-trend {{ result.label }}" style="padding:10px 22px;">{{ result.label|upper }} TREND</div>
+      <div class="confidence mt-3">Confidence: <strong>{{ result.confidence }}%</strong></div>
+    </div>
+
+    <div class="panel mb-3">
+      <div class="panel-title">Likelihood Breakdown</div>
+      <div class="panel-subtitle">How likely this post is to fall into each trend category</div>
+      <div class="chart-wrap" style="height:180px;"><canvas id="chartProbBreakdown"></canvas></div>
+    </div>
+
+    <div class="panel mb-0">
+      <div class="panel-title">Why this prediction?</div>
+      <div class="panel-subtitle">The metrics that most influenced this result, compared to similar posts</div>
+      <div class="d-flex flex-column gap-2">
+        {% for f in result.factors %}
+        <div class="d-flex justify-content-between align-items-center" style="padding:10px 14px; background:var(--panel-raise); border:1px solid var(--line); border-radius:var(--radius);">
+          <span style="font-weight:600; font-size:12.5px; color:var(--text); letter-spacing:0.02em;">{{ f.label }}</span>
+          <span class="text-muted" style="font-size:12.5px;">{{ f.note }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% else %}
+    <div class="panel h-100 d-flex align-items-center justify-content-center text-center" style="min-height:280px;">
+      <div>
+        <div class="stat-icon mx-auto mb-3" style="width:48px;height:48px;font-size:22px;">◎</div>
+        <div class="panel-title">No prediction yet</div>
+        <div class="panel-subtitle mb-0">Fill in the post details and click "Predict Trend" to see the result.</div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+{% if result %}
+<script>
+const probs = {{ result.probs | tojson }};
+new Chart(document.getElementById('chartProbBreakdown'), {
+  type: 'bar',
+  data: {
+    labels: ['Low', 'Moderate', 'High'],
+    datasets: [{
+      label: 'Likelihood %',
+      data: [probs.Low, probs.Moderate, probs.High],
+      backgroundColor: ['#7C879C', '#FF9100', '#00E676'],
+      borderRadius: 6,
+      maxBarThickness: 50,
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    plugins: { legend: { display: false } },
+    scales: { x: { beginAtZero: true, max: 100, grid: { color: '#1C2330' } }, y: { grid: { display: false } } }
+  }
+});
+</script>
+{% endif %}
+{% endblock %}

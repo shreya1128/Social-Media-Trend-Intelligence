@@ -1,0 +1,61 @@
+{
+  "logistic_regression": {
+    "model": "Logistic Regression",
+    "accuracy": 0.9656,
+    "precision": 0.9651,
+    "recall": 0.9633,
+    "f1_score": 0.9642,
+    "confusion_matrix": [
+      [
+        590,
+        9,
+        0
+      ],
+      [
+        10,
+        592,
+        15
+      ],
+      [
+        0,
+        21,
+        363
+      ]
+    ]
+  },
+  "random_forest": {
+    "model": "Random Forest",
+    "accuracy": 0.9831,
+    "precision": 0.9837,
+    "recall": 0.983,
+    "f1_score": 0.9833,
+    "confusion_matrix": [
+      [
+        589,
+        10,
+        0
+      ],
+      [
+        5,
+        607,
+        5
+      ],
+      [
+        0,
+        7,
+        377
+      ]
+    ],
+    "feature_importance": {
+      "platform": 0.0026,
+      "category": 0.0029,
+      "views": 0.0437,
+      "likes": 0.2554,
+      "comments": 0.0911,
+      "shares": 0.1079,
+      "growth_rate": 0.2315,
+      "sentiment_score": 0.021,
+      "engagement_rate": 0.244
+    }
+  }
+}
